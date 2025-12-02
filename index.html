@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Active Competitions</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin: 0; padding: 20px; background:#f6f7fb; color:#111 }
+    header { max-width:1000px; margin:0 auto 20px; }
+    h1 { margin:0 0 8px }
+    #list { display:grid; grid-template-columns: repeat(auto-fill,minmax(280px,1fr)); gap:16px; max-width:1000px; margin:0 auto; }
+    .card { background:white; border-radius:12px; box-shadow:0 6px 18px rgba(20,20,30,0.06); overflow:hidden; display:flex; flex-direction:column; }
+    .thumb { width:100%; height:150px; object-fit:cover; background:#eee }
+    .card-body { padding:12px 14px; flex:1; display:flex; flex-direction:column; gap:8px; }
+    .meta { font-size:13px; color:#555 }
+    .title { font-weight:600; font-size:16px; margin:0 }
+    .cta { margin-top:auto; display:flex; gap:8px; align-items:center; }
+    .btn { text-decoration:none; padding:8px 10px; border-radius:8px; background:#0366d6; color:white; font-weight:600 }
+    .small { font-size:13px; color:#333 }
+    .notice { max-width:1000px; margin:10px auto; color:#444 }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Active Competitions</h1>
+    <p class="notice">Showing competitions whose End Registration is today or in the future.</p>
+  </header>
+
+  <main>
+    <div id="list">Loading…</div>
+  </main>
+
+  <!-- PapaParse for CSV parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <script>
+  // ==== CONFIGURE THIS ====
+  const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT844GE0oFCVQ5uxs1Ci4jWxv_HVCtxS_kvRL5tCix6kz9-NU8F8v4PMpFZaP2BXXniRYo-ROJRg0uK/pub?gid=1536941286&single=true&output=csv";
+  // ========================
+
+  // parse flexible date strings into JS Date (tries ISO, then dd/mm/yyyy and mm/dd)
+  function parseDateFlexible(s) {
+    if (!s) return null;
+    s = s.toString().trim();
+    // Try ISO first
+    let d = new Date(s);
+    if (!isNaN(d)) return d;
+    // Try dd/mm/yyyy or d/m/yyyy
+    const parts1 = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+    if (parts1) {
+      // assume dd/mm/yyyy
+      const dd = Number(parts1[1]), mm = Number(parts1[2]) - 1, yyyy = Number(parts1[3]);
+      d = new Date(yyyy, mm, dd);
+      if (!isNaN(d)) return d;
+    }
+    // fallback: try mm/dd/yyyy
+    const parts2 = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+    if (parts2) {
+      const mm = Number(parts2[1]) - 1, dd = Number(parts2[2]), yyyy = Number(parts2[3]);
+      d = new Date(yyyy < 100 ? 2000 + yyyy : yyyy, mm, dd);
+      if (!isNaN(d)) return d;
+    }
+    return null;
+  }
+
+  // Normalize header names to keys (remove spaces, lowercase)
+  function normalizeKey(h) {
+    return h.trim().toLowerCase().replace(/\s+/g,'_');
+  }
+
+  function todayAtStart() {
+    // Use user's local timezone (browser)
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
+  function formatDate(d) {
+    if (!d) return '';
+    return d.toLocaleDateString();
+  }
+
+  function renderCards(items) {
+    const container = document.getElementById('list');
+    container.innerHTML = '';
+    if (!items.length) {
+      container.innerHTML = "<p style='grid-column: 1/-1; padding:20px; color:#666'>No active competitions.</p>";
+      return;
+    }
+    items.forEach(it => {
+      const card = document.createElement('div'); card.className = 'card';
+      const img = document.createElement('img'); img.className = 'thumb';
+      img.src = it.thumbnail || '';
+      img.alt = it.name_of_competition || 'thumbnail';
+      img.onerror = function(){ this.src = 'https://via.placeholder.com/600x400?text=No+Image' }
+      card.appendChild(img);
+
+      const body = document.createElement('div'); body.className = 'card-body';
+      const title = document.createElement('h3'); title.className='title'; title.textContent = it.name_of_competition || '-';
+      body.appendChild(title);
+
+      const meta = document.createElement('div'); meta.className = 'meta';
+      meta.innerHTML = `<div><strong>Type:</strong> ${it.type_of_competition || '-'}</div>
+                        <div><strong>Mode:</strong> ${it.mode || '-'}</div>
+                        <div><strong>Location:</strong> ${it.location || '-'}</div>`;
+      body.appendChild(meta);
+
+      const dates = document.createElement('div'); dates.className='small';
+      dates.innerHTML = `<div><strong>Start:</strong> ${it.start_date_competition ? formatDate(parseDateFlexible(it.start_date_competition)) : '-'}</div>
+                         <div><strong>End Registration:</strong> ${it.end_registration ? formatDate(parseDateFlexible(it.end_registration)) : '-'}</div>`;
+      body.appendChild(dates);
+
+      const fees = document.createElement('div'); fees.className='small';
+      fees.innerHTML = `<div><strong>Fees:</strong> ${it.fees || 'Free'}</div>`;
+      body.appendChild(fees);
+
+      const cta = document.createElement('div'); cta.className='cta';
+      const reg = document.createElement('a'); reg.className='btn'; reg.href = it.competition_link_for_registration || '#'; reg.target='_blank';
+      reg.textContent = 'Register';
+      if (!it.competition_link_for_registration) reg.style.opacity = 0.6;
+      cta.appendChild(reg);
+      body.appendChild(cta);
+
+      card.appendChild(body);
+      container.appendChild(card);
+    });
+  }
+
+  // Fetch CSV, parse and filter active
+  function loadAndRender() {
+    document.getElementById('list').textContent = 'Loading…';
+    fetch(CSV_URL)
+      .then(r => {
+        if (!r.ok) throw new Error('Failed to fetch sheet. Check CSV_URL and that sheet is published.');
+        return r.text();
+      })
+      .then(csvText => {
+        const parsed = Papa.parse(csvText, { header: true, skipEmptyLines:true });
+        // Normalize keys (lowercase underscores)
+        const items = parsed.data.map(row => {
+          const obj = {};
+          Object.keys(row).forEach(k => obj[ normalizeKey(k) ] = row[k].trim());
+          return obj;
+        });
+
+        const today = todayAtStart();
+
+        // Filter where End Registration >= today
+        const active = items.filter(it => {
+          const end = parseDateFlexible(it.end_registration || it['end registration'] || '');
+          if (!end) return false; // treat missing/invalid as not active
+          // Use date without time
+          const endStart = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+          return endStart >= today;
+        });
+
+        // optional: sort by end registration ascending
+        active.sort((a,b) => {
+          const da = parseDateFlexible(a.end_registration || '');
+          const db = parseDateFlexible(b.end_registration || '');
+          return (da && db) ? da - db : (da ? -1 : 1);
+        });
+
+        renderCards(active);
+      })
+      .catch(err => {
+        document.getElementById('list').textContent = 'Error loading competitions: ' + err.message;
+        console.error(err);
+      });
+  }
+
+  // Start
+  loadAndRender();
+
+  // Optional auto-refresh every 5 minutes
+  // setInterval(loadAndRender, 5*60*1000);
+  </script>
+</body>
+</html>
