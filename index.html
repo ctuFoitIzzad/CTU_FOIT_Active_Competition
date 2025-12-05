@@ -17,7 +17,10 @@
     .cta { margin-top:auto; display:flex; gap:8px; align-items:center; }
     .btn { text-decoration:none; padding:8px 10px; border-radius:8px; background:#0366d6; color:white; font-weight:600 }
     .small { font-size:13px; color:#333 }
-    .tracking-note { background:#e8f3ff; border-left:4px solid #0366d6; padding:12px 14px; border-radius:6px; margin:20px 0 28px; /* TOP 20px, BOTTOM 28px */ }
+    .tracking-note { background:#e8f3ff; border-left:4px solid #0366d6; padding:12px 14px; border-radius:6px; margin:20px 0 28px; text-align:center; /* TOP 20px, BOTTOM 28px */ }
+    .tracking-note strong { font-weight:600; color:#024a9c; }
+    footer { text-align:center; font-size:14px; color:#555; padding:20px 0 30px; margin-top:40px; border-top:1px solid #ddd; }
+    footer strong { color:#222; }
   </style>
 </head>
 <body>
@@ -183,5 +186,11 @@
   // Optional auto-refresh every 5 minutes
   setInterval(loadAndRender, 5*60*1000);
   </script>
+
+  <footer>
+    Managed by <strong>Faculty of Information Technology</strong>, 
+    City University Malaysia
+  </footer>
+
 </body>
 </html>
